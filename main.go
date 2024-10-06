@@ -3,8 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
-	"project-golangDB/entity"
+	// "project-golangDB/entity"
 
 	_ "github.com/lib/pq"
 )
@@ -19,391 +20,511 @@ const (
 
 var psqlInfo = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
+var db *sql.DB
+
 func main() {
-	customer := entity.Customer{Id: 3, Name: "king", Phone: "0819774393", Address: "Bandung"}
-	create_Customer(customer)
-	// customers := view_Of_List_Customer()
-	// for _, customer := range customers {
-	// 	fmt.Println(customer.Id, customer.Name, customer.Phone, customer.Address, customer.Created_at, customer.Updated_at)
-	// }
-	// fmt.Println(get_Customer_By_ID(5))
-	// update_Customer(customer)
-	// delete_Customer(6)
-
+	db = connect_Db()  // Connect to the database
+	defer db.Close()    // Make sure to close the connection when the program ends
+	mainMenu()
 }
 
-// func enroll_Customer(customer_Enrollment entity.Customer){
-// 	db := connect_Db()
-// 	defer db.Close()
+func mainMenu() {
+    var choice int
+	for {
+    fmt.Println("Main Menu:")
+    fmt.Println("1. Customer")
+    fmt.Println("2. Service")
+    fmt.Println("3. Order")
+    fmt.Println("4. Exit")
+    fmt.Print("Enter choice: ")
+    fmt.Scanln(&choice)
 
-// 	tx, err := db.Begin()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	create_Customer(customer_Enrollment, tx)
-
-// 	update_Order(customer_Enrollment.Id, tx)
-
-// 	if err := tx.Commit(); err != nil {
-// 		fmt.Println("Failed to commit transaction:", err)
-// 		tx.Rollback() // rollback jika commit gagal
-// 	} else {
-// 		fmt.Println("Transaction committed successfully")
-// 	}
-// }
-
-// func update_Order(customer_Id int, tx *sql.Tx) {
-// 	update_Order := "UPDATE \"order\" SET customer_id = $1"
-
-// 	_,err := tx.Exec(update_Order, customer_Id)
-// 	validate(err, "Update", tx)
-// }
-
-func create_Customer(customer entity.Customer) {
-	db := connect_Db()
-	defer db.Close()
-	var err error
-
-	if check_Query(db, customer.Id) {
-		fmt.Println("Customer ID already exists. Please enter a different ID.")
-		return
-	}
-
-	insert_Customer := "INSERT INTO customer (customer_id, name, phone, address) VALUES ($1, $2, $3, $4);"
-
-	_ , err = db.Exec(insert_Customer, customer.Id, customer.Name, customer.Phone, customer.Address)
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Insert Data!")
-	}
-	// validate(err, "Insert", tx)
+    switch choice {
+    case 1:
+        customerMenu()
+    case 2:
+        serviceMenu()
+    case 3:
+        orderMenu()
+    case 4:
+        fmt.Println("Exiting...")
+        return
+    default:
+        fmt.Println("Invalid choice.")
+        mainMenu()
+    }
+}
 }
 
-func view_Of_List_Customer() []entity.Customer {
-	db := connect_Db()
-	defer db.Close()
+func customerMenu() {
+    var choice int
+    fmt.Println("Customer Menu:")
+    fmt.Println("1. Create Customer")
+    fmt.Println("2. View Customer List")
+    fmt.Println("3. View Customer Details")
+    fmt.Println("4. Update Customer")
+    fmt.Println("5. Delete Customer")
+    fmt.Println("6. Back to Main Menu")
+    fmt.Print("Enter choice: ")
+    fmt.Scanln(&choice)
 
-	sql_Statement := "SELECT * FROM customer"
-
-	rows, err := db.Query(sql_Statement)
-	if err != nil {
-		panic(err)
-	}
-	defer rows.Close()
-
-	customers := scan_Customers(rows)
-
-	return customers
+    switch choice {
+    case 1:
+        createCustomer()
+    case 2:
+        viewCustomerList()
+    case 3:
+        viewCustomerDetails()
+    case 4:
+        updateCustomer()
+    case 5:
+        deleteCustomer()
+    case 6:
+        mainMenu()
+    default:
+        fmt.Println("Invalid choice.")
+        customerMenu()
+    }
 }
 
-func scan_Customers(rows *sql.Rows) []entity.Customer {
-	customers := []entity.Customer{}
-	var err error
+func createCustomer() {
+    var id int
+    var name, phone, address string
+    fmt.Print("Enter customer ID: ")
+    fmt.Scanln(&id)
 
-	for rows.Next() {
-		customer := entity.Customer{}
-		err := rows.Scan(&customer.Id, &customer.Name, &customer.Phone, &customer.Address, &customer.Created_at, &customer.Updated_at)
-		if err != nil {
-			panic(err)
-		}
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM customer WHERE customer_id=$1)", id).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if exists {
+        fmt.Println("Customer ID already exists. Please enter a different ID.")
+        return
+    }
 
-		customers = append(customers, customer)
-	}
+    fmt.Print("Enter name: ")
+    fmt.Scanln(&name)
+    fmt.Print("Enter phone: ")
+    fmt.Scanln(&phone)
+    fmt.Print("Enter address: ")
+    fmt.Scanln(&address)
 
-	err = rows.Err()
-	if err != nil {
-		panic(err)
-	}
+    _, err = db.Exec("INSERT INTO customer (customer_id, name, phone, address) VALUES ($1, $2, $3, $4)", id, name, phone, address)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	return customers
+    fmt.Println("Customer created successfully.")
 }
 
-func get_Customer_By_ID(id int) entity.Customer {
-	db := connect_Db()
-	defer db.Close()
+func viewCustomerList() {
+    rows, err := db.Query("SELECT customer_id, name, phone, address FROM customer")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
 
-	var err error
+    fmt.Println("Customer List:")
+    for rows.Next() {
+        var id int
+        var name, phone, address string
+        err := rows.Scan(&id, &name, &phone, &address)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("ID: %d, Name: %s, Phone: %s, Address: %s\n", id, name, phone, address)
+    }
+}
 
-	sql_Statement :=  "SELECT * FROM customer WHERE customer_id = $1"
-	
-	customer := entity.Customer{}
-	if !check_Query(db, id) {
+func viewCustomerDetails() {
+    var id int
+    fmt.Print("Enter customer ID: ")
+    fmt.Scanln(&id)
+
+    var name, phone, address string
+    err := db.QueryRow("SELECT name, phone, address FROM customer WHERE customer_id=$1", id).Scan(&name, &phone, &address)
+    if err == sql.ErrNoRows {
 		fmt.Println("Customer not found.")
-	} 
-
-	err = db.QueryRow(sql_Statement, id).Scan(&customer.Id, &customer.Name, &customer.Phone, &customer.Address, &customer.Created_at, &customer.Updated_at)
-	if err != nil {
-		panic(err)
-	}
-	
-	return customer
-}
-
-func update_Customer(customer entity.Customer) {
-	db := connect_Db()
-	defer db.Close()
-	var err error
-
-	if !check_Query(db, customer.Id) {
-		fmt.Println("Customer not found")
 		return
-	}
+	} else if err != nil {
+		log.Fatal(err)
+	}	
 
-	sql_Statement := "UPDATE customer SET name = $2, phone = $3, address = $4,  updated_at = CURRENT_TIMESTAMP WHERE customer_id = $1;"
-
-	_, err = db.Exec(sql_Statement, customer.Id, customer.Name, customer.Phone, customer.Address)
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Update Data!")
-	}
+    fmt.Printf("ID: %d, Name: %s, Phone: %s, Address: %s\n", id, name, phone, address)
 }
 
-func delete_Customer(id int) {
-	db := connect_Db()
-	defer db.Close()
-	var err error 
+func updateCustomer() {
+    var id int
+    var name, phone, address string
+    fmt.Print("Enter customer ID: ")
+    fmt.Scanln(&id)
 
-	if !check_Query(db, id) {
-		fmt.Println("Customer not found")
-		return
-	}
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM customer WHERE customer_id=$1)", id).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if !exists {
+        fmt.Println("Customer not found.")
+        return
+    }
 
-	sql_Statement := "DELETE FROM customer WHERE customer_id = $1;"
+    fmt.Print("Enter new name: ")
+    fmt.Scanln(&name)
+    fmt.Print("Enter new phone: ")
+    fmt.Scanln(&phone)
+    fmt.Print("Enter new address: ")
+    fmt.Scanln(&address)
 
-	_, err = db.Exec(sql_Statement, id)
-	if err != nil {
-		panic(err)		
-	} else {
-		fmt.Println("Successfully Delete Data!")
-	}
+    _, err = db.Exec("UPDATE customer SET name=$1, phone=$2, address=$3, updated_at=NOW() WHERE customer_id=$4", name, phone, address, id)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Customer updated successfully.")
 }
 
-func create_Services(service entity.Service) {
-	db := connect_Db()
-	defer db.Close()
-	var err error
-	if check_Query(db, service.Id) {
-		fmt.Println("Service ID already exists. Please enter a different ID.")
-		return
-	}
+func deleteCustomer() {
+    var id int
+    fmt.Print("Enter customer ID: ")
+    fmt.Scanln(&id)
 
-	insert_Service := "INSERT INTO service(service_id, service_name, unit, price) VALUES ($1, $2, $3, $4);"
+    // Cek apakah customer ID ada di database
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM customer WHERE customer_id=$1)", id).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	_, err = db.Exec(insert_Service, service.Id, service.Name, service.Unit, service.Price)
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Insert Data!")
-	}
+    if !exists {
+        // Jika ID tidak ditemukan
+        fmt.Println("Customer ID not found. Please enter a different ID.")
+        return
+    }
+
+    // Cek apakah customer ID sudah digunakan dalam tabel order
+    var orderExists bool
+    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE customer_id=$1)", id).Scan(&orderExists)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if orderExists {
+        // Jika customer ID digunakan di dalam order
+        fmt.Println("Customer ID is being used in orders. Please delete the order first.")
+        return
+    }
+
+    // Jika customer tidak terlibat di order, hapus customer
+    _, err = db.Exec("DELETE FROM customer WHERE customer_id=$1", id)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Customer deleted successfully.")
 }
 
-func  view_Of_List_Service() []entity.Service {
-	db := connect_Db()
-	defer db.Close()
+func serviceMenu() {
+    var choice int
+    fmt.Println("Service Menu:")
+    fmt.Println("1. Create Service")
+    fmt.Println("2. View Service List")
+    fmt.Println("3. View Service Details")
+    fmt.Println("4. Update Service")
+    fmt.Println("5. Delete Service")
+    fmt.Println("6. Back to Main Menu")
+    fmt.Print("Enter choice: ")
+    fmt.Scanln(&choice)
 
-	view_Service := "SELECT * FROM service;"
-
-	rows, err := db.Query(view_Service)
-	if err != nil {
-		panic(err)
-	}
-	defer rows.Close()
-
-	view_Services := scan_Service(rows)
-
-	return view_Services
+    switch choice {
+    case 1:
+        createService()
+    case 2:
+        viewServiceList()
+    case 3:
+        viewServiceDetails()
+    case 4:
+        updateService()
+    case 5:
+        deleteService()
+    case 6:
+        mainMenu()
+    default:
+        fmt.Println("Invalid choice.")
+        serviceMenu()
+    }
 }
 
-func scan_Service(rows *sql.Rows) []entity.Service {
-	services := []entity.Customer{}
-	var err error
+func createService() {
+    var id int
+    var name, unit string
+    var price int
 
-	for rows.Next() {
-		service := entity.Service{}
-		err := rows.Scan(&service.Id, &service.Name, &service.Unit, &service.Price, &service.Created_at, service.Updated_at)
-		if err != nil{
-			panic(err)
-		}
+    fmt.Print("Enter service ID: ")
+    fmt.Scanln(&id)
 
-		services = append(services, service)
-	}
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM service WHERE service_id=$1)", id).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if exists {
+        fmt.Println("Service ID already exists. Please enter a different ID.")
+        return
+    }
 
-	err = rows.Err()
-	if err != nil {
-		panic(err)
-	}
+    fmt.Print("Enter service name: ")
+    fmt.Scanln(&name)
+    fmt.Print("Enter unit: ")
+    fmt.Scanln(&unit)
+    fmt.Print("Enter price: ")
+    fmt.Scanln(&price)
 
-	return services
+    _, err = db.Exec("INSERT INTO service (service_id, service_name, unit, price) VALUES ($1, $2, $3, $4)", id, name, unit, price)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Service created successfully.")
 }
 
-func view_Details_Service_By_ID(id int) entity.Service{
-	db := connect_Db()
-	defer db.Close()
-	var err error
+func viewServiceList() {
+    rows, err := db.Query("SELECT service_id, service_name, unit, price FROM service")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
 
-	view_By_ID := "SELECT * FROM service WHERE id = $1;"
-
-	service := entity.Service{}
-	err = db.QueryRow(view_By_ID, id).Scan(&service.Id, &service.Name, &service.Price, &service.Unit, service.Created_at, service.Updated_at)
-	if err != nil {
-		panic(err)
-	}
-
-	return service
+    fmt.Println("Service List:")
+    for rows.Next() {
+        var id, price int
+        var name, unit string
+        err := rows.Scan(&id, &name, &unit, &price)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("ID: %d, Name: %s, Unit: %s, Price: %d\n", id, name, unit, price)
+    }
 }
 
-func update_Service(service entity.Service){
-	db := connect_Db()
-	defer db.Close()
-	var err error
+func viewServiceDetails() {
+    var id int
+    fmt.Print("Enter service ID: ")
+    fmt.Scanln(&id)
 
-	sql := "UPDATE service SET service_name = $2, unit = $3, price = $4, updated_at = $5 WHERE service_id = $1;"
+    var name, unit string
+    var price int
+    err := db.QueryRow("SELECT service_name, unit, price FROM service WHERE service_id=$1", id).Scan(&name, &unit, &price)
+    if err == sql.ErrNoRows {
+        fmt.Println("Service not found.")
+        return
+    } else if err != nil {
+        log.Fatal(err)
+    }
 
-	_, err = db.Exec(sql, service.Id, service.Name, service.Unit, service.Price, service.Updated_at)
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Update Data!")
-	}
+    fmt.Printf("ID: %d, Name: %s, Unit: %s, Price: %d\n", id, name, unit, price)
 }
 
-func Delete_Service(id int) {
-	db := connect_Db()
-	defer db.Close()
-	var err error
+func updateService() {
+    var id int
+    var name, unit string
+    var price int
 
-	sql := "DELETE FROM service WHERE service_id = $1;"
+    fmt.Print("Enter service ID: ")
+    fmt.Scanln(&id)
 
-	_, err = db.Exec(sql, id)
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Delete Data!.")
-	}
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM service WHERE service_id=$1)", id).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if !exists {
+        fmt.Println("Service not found.")
+        return
+    }
+
+    fmt.Print("Enter new service name: ")
+    fmt.Scanln(&name)
+    fmt.Print("Enter new unit: ")
+    fmt.Scanln(&unit)
+    fmt.Print("Enter new price: ")
+    fmt.Scanln(&price)
+
+    _, err = db.Exec("UPDATE service SET service_name=$1, unit=$2, price=$3, updated_at=NOW() WHERE service_id=$4", name, unit, price, id)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Service updated successfully.")
 }
 
-func create_Order(order entity.Order) {
-	db := connect_Db()
-	defer db.Close()
-	var err error
-	if check_Query(db, order.Id) {
-		fmt.Println("Customer ID already exists. Please enter a different ID.")
-		return
-	}
+func deleteService() {
+    var id int
+    fmt.Print("Enter service ID: ")
+    fmt.Scanln(&id)
 
-	insert_Order := "INSERT INTO  \"order\" (order_id, customer_id,  received_by) VALUES ($1, $2, $3);"
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM service WHERE service_id=$1)", id).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if !exists {
+        fmt.Println("Service ID not found. Please enter a different ID.")
+        return
+    }
 
-	_, err = db.Exec(insert_Order, order.Id, order.Customer_id, order.Order_date, order.Received_by)
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Insert Data Order!")
-	}
+    // Check if the service is used in any orders
+    var orderExists bool
+    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM order_detail WHERE service_id=$1)", id).Scan(&orderExists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if orderExists {
+        fmt.Println("Service ID is being used in orders. Please delete the order first.")
+        return
+    }
+
+    _, err = db.Exec("DELETE FROM service WHERE service_id=$1", id)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Service deleted successfully.")
 }
 
-func Complete_Order(order entity.Order){
-	db := connect_Db()
-	defer db.Close()
-	var err error
+func orderMenu() {
+    var choice int
+    fmt.Println("Order Menu:")
+    fmt.Println("1. Create Order")
+    fmt.Println("2. Complete Order")
+    fmt.Println("3. View Order List")
+    fmt.Println("4. View Order Details")
+    fmt.Println("5. Back to Main Menu")
+    fmt.Print("Enter choice: ")
+    fmt.Scanln(&choice)
 
-	sql_Statement := "UPDATE  \"order\" SET completion_date = $2,  updated_date = $3 WHERE id = $1;"
-
-	_, err = db.Exec(sql_Statement, order.Id, order.Completion_date, order.Updated_at )
-	if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("Successfully Complete Order!")
-	}
+    switch choice {
+    case 1:
+        createOrder()
+    case 2:
+        completeOrder()
+    case 3:
+        viewOrderList()
+    case 4:
+        viewOrderDetails()
+    case 5:
+        mainMenu()
+    default:
+        fmt.Println("Invalid choice.")
+        orderMenu()
+    }
 }
 
-func View_Of_List_Order() []entity.Order {
-	db := connect_Db()
-	defer db.Close()
+func createOrder() {
+    var orderID, customerID int
+    var receivedBy string
 
-	sql_Statement := "SELECT * FROM \"order\";"
+    fmt.Print("Enter order ID: ")
+    fmt.Scanln(&orderID)
 
-	rows, err := db.Query(sql_Statement)
-	if err != nil {
-		panic(err)
-	}
-	defer rows.Close()
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", orderID).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if exists {
+        fmt.Println("Order ID already exists. Please enter a different ID.")
+        return
+    }
 
-	orders := scan_Order(rows)
+    fmt.Print("Enter customer ID: ")
+    fmt.Scanln(&customerID)
 
-	return orders
+    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM customer WHERE customer_id=$1)", customerID).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if !exists {
+        fmt.Println("Customer not found.")
+        return
+    }
+
+    fmt.Print("Enter received by: ")
+    fmt.Scanln(&receivedBy)
+
+    _, err = db.Exec("INSERT INTO \"order\" (order_id, customer_id, order_date, received_by) VALUES ($1, $2, NOW(), $3)", orderID, customerID, receivedBy)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Order created successfully.")
 }
 
-func scan_Order(rows *sql.Rows) []entity.Order {
-	orders := []entity.Order{}
-	var err error
+func completeOrder() {
+    var orderID int
+    var completionDate string
 
-	for rows.Next() {
-		order := entity.Order{}
-		err := rows.Scan(&order.Id, &order.Customer_id,&order.Order_date, &order.Completion_date, order.Received_by, order.Created_at, &order.Updated_at)
-		if err != nil{
-			panic(err)
-		}
+    fmt.Print("Enter order ID: ")
+    fmt.Scanln(&orderID)
 
-		orders = append(orders, order)
-	}
+    var exists bool
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", orderID).Scan(&exists)
+    if err != nil {
+        log.Fatal(err)
+    }
+    if !exists {
+        fmt.Println("Order not found.")
+        return
+    }
 
-	err = rows.Err()
-	if err != nil {
-		panic(err)
-	}
+    fmt.Print("Enter completion date (YYYY-MM-DD): ")
+    fmt.Scanln(&completionDate)
 
-	return orders
+    _, err = db.Exec("UPDATE \"order\" SET completion_date=$1, updated_at=NOW() WHERE order_id=$2", completionDate, orderID)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println("Order completed successfully.")
 }
 
-func View_Order_Details_By_ID(id int) entity.Order{
-	db := connect_Db()
-	defer db.Close()
-	var err error
+func viewOrderList() {
+    rows, err := db.Query("SELECT order_id, customer_id, order_date, received_by FROM \"order\"")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
 
-	sql_Statement := "SELECT * FORM \"order\" WHERE order_id = $1;"
-
-	order := entity.Order{}
-	err = db.QueryRow(sql_Statement, id).Scan(&order.Id, &order.Customer_id, &order.Order_date, &order.Completion_date, &order.Received_by, &order.Created_at, &order.Updated_at)
-	if err != nil {
-		panic(err)
-	}
-
-	return order
+    fmt.Println("Order List:")
+    for rows.Next() {
+        var orderID, customerID int
+        var orderDate, receivedBy string
+        err := rows.Scan(&orderID, &customerID, &orderDate, &receivedBy)
+        if err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("Order ID: %d, Customer ID: %d, Order Date: %s, Received By: %s\n", orderID, customerID, orderDate, receivedBy)
+    }
 }
 
-func check_Query(db *sql.DB, customer_Id int) bool {
-	var exists bool
-	checkQuery := "SELECT EXISTS(SELECT 1 FROM customer WHERE customer_id = $1)"
-	err := db.QueryRow(checkQuery, customer_Id).Scan(&exists)
-	if err != nil {
-		panic(err)
-	}
+func viewOrderDetails() {
+    var orderID int
+    fmt.Print("Enter order ID: ")
+    fmt.Scanln(&orderID)
 
-	return exists
+    var customerID int
+    var orderDate, receivedBy, completionDate string
+    err := db.QueryRow("SELECT customer_id, order_date, received_by, completion_date FROM \"order\" WHERE order_id=$1", orderID).Scan(&customerID, &orderDate, &receivedBy, &completionDate)
+    if err == sql.ErrNoRows {
+        fmt.Println("Order not found.")
+        return
+    } else if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Order ID: %d, Customer ID: %d, Order Date: %s, Received By: %s, Completion Date: %s\n", orderID, customerID, orderDate, receivedBy, completionDate)
 }
-
-// func check_Query1(tx *sql.Tx, customer_Id int) bool {
-// 	var exists bool
-// 	checkQuery := "SELECT EXISTS(SELECT 1 FROM customer WHERE customer_id = $1)"
-// 	err := tx.QueryRow(checkQuery, customer_Id).Scan(&exists)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	return exists
-// }
-
-// func validate(err error, messsage string, tx *sql.Tx){
-// 	if err != nil {
-// 		tx.Rollback()
-// 		fmt.Println(err, "Transaction Rollback!")
-// 	} else {
-// 		fmt.Println("Succesfully " + messsage + " data!")
-// 	}
-// }
 
 func connect_Db() *sql.DB {
 	db, err := sql.Open("postgres", psqlInfo)
