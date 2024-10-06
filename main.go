@@ -285,8 +285,6 @@ func Delete_Service(id int) {
 	}
 }
 
-func 
-
 func create_Order(order entity.Order) {
 	db := connect_Db()
 	defer db.Close()
@@ -304,6 +302,76 @@ func create_Order(order entity.Order) {
 	} else {
 		fmt.Println("Successfully Insert Data Order!")
 	}
+}
+
+func Complete_Order(order entity.Order){
+	db := connect_Db()
+	defer db.Close()
+	var err error
+
+	sql_Statement := "UPDATE  \"order\" SET completion_date = $2,  updated_date = $3 WHERE id = $1;"
+
+	_, err = db.Exec(sql_Statement, order.Id, order.Completion_date, order.Updated_at )
+	if err != nil {
+		panic(err)
+	} else {
+		fmt.Println("Successfully Complete Order!")
+	}
+}
+
+func View_Of_List_Order() []entity.Order {
+	db := connect_Db()
+	defer db.Close()
+
+	sql_Statement := "SELECT * FROM \"order\";"
+
+	rows, err := db.Query(sql_Statement)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	orders := scan_Order(rows)
+
+	return orders
+}
+
+func scan_Order(rows *sql.Rows) []entity.Order {
+	orders := []entity.Order{}
+	var err error
+
+	for rows.Next() {
+		order := entity.Order{}
+		err := rows.Scan(&order.Id, &order.Customer_id,&order.Order_date, &order.Completion_date, order.Received_by, order.Created_at, &order.Updated_at)
+		if err != nil{
+			panic(err)
+		}
+
+		orders = append(orders, order)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		panic(err)
+	}
+
+	return orders
+}
+
+func View_Order_Details_By_ID(id int) entity.Order{
+	db := connect_Db()
+	defer db.Close()
+	var err error
+
+	sql_Statement := "SELECT * FORM \"order\" WHERE order_id = $1;"
+
+	order := entity.Order{}
+	err = db.QueryRow(sql_Statement, id).Scan(&order.Id, &order.Customer_id, &order.Order_date, &order.Completion_date, &order.Received_by, &order.Created_at, &order.Updated_at)
+	if err != nil {
+		panic(err)
+	}
+
+	return order
 }
 
 func check_Query(db *sql.DB, customer_Id int) bool {
