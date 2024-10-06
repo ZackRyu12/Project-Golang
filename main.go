@@ -424,10 +424,13 @@ func orderMenu() {
 func createOrder() {
     var orderID, customerID int
     var receivedBy string
+    var serviceID, quantity int
 
+    // Input order information
     fmt.Print("Enter order ID: ")
     fmt.Scanln(&orderID)
 
+    // Cek apakah order ID sudah ada
     var exists bool
     err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", orderID).Scan(&exists)
     if err != nil {
@@ -438,6 +441,7 @@ func createOrder() {
         return
     }
 
+    // Input customer ID
     fmt.Print("Enter customer ID: ")
     fmt.Scanln(&customerID)
 
@@ -450,16 +454,47 @@ func createOrder() {
         return
     }
 
+    // Input service details
     fmt.Print("Enter received by: ")
     fmt.Scanln(&receivedBy)
+    fmt.Print("Enter service ID: ")
+    fmt.Scanln(&serviceID)
+    fmt.Print("Enter quantity: ")
+    fmt.Scanln(&quantity)
 
-    _, err = db.Exec("INSERT INTO \"order\" (order_id, customer_id, order_date, received_by) VALUES ($1, $2, NOW(), $3)", orderID, customerID, receivedBy)
+    // Mulai transaksi
+    tx, err := db.Begin()
     if err != nil {
-        log.Fatal(err)
+        log.Fatal("Failed to begin transaction:", err)
     }
 
-    fmt.Println("Order created successfully.")
+    // Insert ke tabel order
+    _, err = tx.Exec("INSERT INTO \"order\" (order_id, customer_id, order_date, received_by) VALUES ($1, $2, NOW(), $3)", orderID, customerID, receivedBy)
+    if err != nil {
+        // Jika gagal, rollback transaksi
+        tx.Rollback()
+        fmt.Println("Failed to insert into order:", err)
+        return
+    }
+
+    // Insert ke tabel order_detail
+    _, err = tx.Exec("INSERT INTO order_detail (order_id, service_id, qty)VALUES ($1, $2, $3)", orderID, serviceID, quantity)
+    if err != nil {
+        // Jika gagal, rollback transaksi
+        tx.Rollback()
+        fmt.Println("Failed to insert into order_detail:", err)
+        return
+    }
+
+    // Commit transaksi jika semua berhasil
+    err = tx.Commit()
+    if err != nil {
+        fmt.Println("Failed to commit transaction:", err)
+    } else {
+        fmt.Println("Order and order detail created successfully.")
+    }
 }
+
 
 func completeOrder() {
     var orderID int
