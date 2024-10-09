@@ -204,13 +204,13 @@ func deleteCustomer() {
     }
 
     // Cek apakah customer ID sudah digunakan dalam tabel order
-    var orderExists bool
+    var order_Exists bool
     err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE customer_id=$1)", id).Scan(&orderExists)
     if err != nil {
         log.Fatal(err)
     }
 
-    if orderExists {
+    if order_Exists {
         // Jika customer ID digunakan di dalam order
         fmt.Println("Customer ID is being used in orders. Please delete the order first.")
         return
@@ -375,12 +375,12 @@ func deleteService() {
     }
 
     // Check if the service is used in any orders
-    var orderExists bool
+    var order_Exists bool
     err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM order_detail WHERE service_id=$1)", id).Scan(&orderExists)
     if err != nil {
         log.Fatal(err)
     }
-    if orderExists {
+    if order_Exists {
         fmt.Println("Service ID is being used in orders. Please delete the order first.")
         return
     }
@@ -495,7 +495,6 @@ func createOrder() {
     }
 }
 
-
 func completeOrder() {
     var orderID int
     var completionDate string
@@ -533,24 +532,24 @@ func viewOrderList() {
 
     fmt.Println("Order List:")
     for rows.Next() {
-        var orderID, customerID int
-        var orderDate, receivedBy string
-        err := rows.Scan(&orderID, &customerID, &orderDate, &receivedBy)
+        var order_ID, customer_ID int
+        var order_Date, received_By string
+        err := rows.Scan(&order_ID, &customer_ID, &order_Date, &received_By)
         if err != nil {
             log.Fatal(err)
         }
-        fmt.Printf("Order ID: %d, Customer ID: %d, Order Date: %s, Received By: %s\n", orderID, customerID, orderDate, receivedBy)
+        fmt.Printf("Order ID: %d, Customer ID: %d, Order Date: %s, Received By: %s\n", order_ID, customer_ID, order_Date, received_By)
     }
 }
 
 func viewOrderDetails() {
-    var orderID int
+    var order_ID int
     fmt.Print("Enter order ID: ")
-    fmt.Scanln(&orderID)
+    fmt.Scanln(&order_ID)
 
-    var customerID int
-    var orderDate, receivedBy, completionDate string
-    err := db.QueryRow("SELECT customer_id, order_date, received_by, completion_date FROM \"order\" WHERE order_id=$1", orderID).Scan(&customerID, &orderDate, &receivedBy, &completionDate)
+    var customer_ID int
+    var order_Date, received_By, completion_Date string
+    err := db.QueryRow("SELECT customer_id, order_date, received_by, completion_date FROM \"order\" WHERE order_id=$1", order_ID).Scan(&customer_ID, &order_Date, &received_By, &completion_Date)
     if err == sql.ErrNoRows {
         fmt.Println("Order not found.")
         return
@@ -558,7 +557,7 @@ func viewOrderDetails() {
         log.Fatal(err)
     }
 
-    fmt.Printf("Order ID: %d, Customer ID: %d, Order Date: %s, Received By: %s, Completion Date: %s\n", orderID, customerID, orderDate, receivedBy, completionDate)
+    fmt.Printf("Order ID: %d, Customer ID: %d, Order Date: %s, Received By: %s, Completion Date: %s\n", order_ID, customer_ID, order_Date, received_By, completion_Date)
 }
 
 func connect_Db() *sql.DB {

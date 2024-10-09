@@ -35,3 +35,29 @@ CREATE TABLE order_detail (
     FOREIGN KEY(order_id) REFERENCES "order"(order_id),
     FOREIGN KEY(service_id) REFERENCES service(service_id)
 );
+
+
+# Enigma Laundry Management System
+
+Enigma Laundry Management System is a simple CLI-based application written in Go to manage customers, services, and orders in a laundry business.
+
+## Features
+
+- **Customer Management**: Create, view, update, and delete customer records.
+- **Service Management**: Create, view, update, and delete laundry services.
+- **Order Management**: Create, view, complete, and manage orders.
+
+## Requirements
+
+- PostgreSQL installed and running
+- Go 1.16+ installed
+
+## Database Setup
+
+1. Install PostgreSQL and ensure it's running.
+2. Create a database named `enigma_laundry`.
+3. Import the DDL file (`DDL.sql`) to set up the database schema.
+4. Import the DML file (DML.sql) to populate initial data.
+
+   ```bash
+   psql -U postgres -d enigma_laundry -f DDL.sql
