@@ -1,9 +1,4 @@
-
----
-
-### 2. `DDL.sql` (Database Definition Language)
-
-```sql
+-- (Database Definition Language)
 -- Create the 'customer' table
 CREATE TABLE customer (
     customer_id SERIAL PRIMARY KEY,
