@@ -1,42 +1,3 @@
-CREATE TABLE customer (
-    customer_id INT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    phone VARCHAR(255) NOT NULL,
-    address VARCHAR(255) DEFAULT '',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE service (
-    service_id INT PRIMARY KEY,
-    service_name VARCHAR(255) NOT NULL,
-    unit VARCHAR(255) NOT NULL,
-    price INT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE "order" (
-    order_id INT PRIMARY KEY,
-    customer_id INT NOT NULL,
-    order_date TIMESTAMP NOT NULL,
-    completion_date TIMESTAMP,
-    received_by VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(customer_id) REFERENCES customer(customer_id)
-);
-
-CREATE TABLE order_detail (
-    order_detail_id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL ,
-    service_id INT NOT NULL,
-    qty INT NOT NULL,
-    FOREIGN KEY(order_id) REFERENCES "order"(order_id),
-    FOREIGN KEY(service_id) REFERENCES service(service_id)
-);
-
-
 # Enigma Laundry Management System
 
 Enigma Laundry Management System is a simple CLI-based application written in Go to manage customers, services, and orders in a laundry business.
@@ -61,3 +22,61 @@ Enigma Laundry Management System is a simple CLI-based application written in Go
 
    ```bash
    psql -U postgres -d enigma_laundry -f DDL.sql
+
+  ## How to Run the Application
+1. Clone the repository or download the project files.
+2. Ensure you have Go installed on your machine.
+3. Navigate to the project directory and update the PostgreSQL credentials in the main.go file:
+
+    ```bash
+    const (
+    host     = "localhost"
+    port     = 5432
+    user     = "postgres"
+    password = "1234"
+    dbname   = "enigma_laundry"
+    )
+4. Run the project using the following command:
+
+    ```bash
+    go run main.go
+
+## Application Usage
+When you run the application, the following menu will appear:
+
+### Main Menu:
+
+    ```bash
+    Main Menu:
+    1. Customer
+    2. Service
+    3. Order
+    4. Exit
+
+### Customer Menu:
+You can manage customer information using this menu. Options include:
+- Create Customer
+- View Customer List
+- View Customer Details
+- Update Customer
+- Delete Customer
+
+### Service Menu:
+You can manage laundry services using this menu. Options include:
+
+- Create Service
+- View Service List
+- View Service Details
+- Update Service
+- Delete Service
+### Order Menu:
+You can manage customer orders using this menu. Options include:
+
+- Create Order
+- Complete Order
+- View Order List
+- View Order Details
+### Error Handling
+- If you try to delete a customer or service that is currently being used in an order, you will receive an error message:
+    - For customers: Customer ID is being used in orders. Please delete the order first.
+    - For services: Service ID is being used in orders. Please delete the order first.
