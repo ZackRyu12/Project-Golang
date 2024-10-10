@@ -3,3 +3,7 @@ te.go
 .vscode/ 
 data1.go
 entity/
+service.sql
+order.sql
+order_detail.sql
+customer.sql
