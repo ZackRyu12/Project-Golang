@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	// "project-golangDB/entity"
-
 	_ "github.com/lib/pq"
 )
 
