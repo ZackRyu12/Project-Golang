@@ -203,7 +203,7 @@ func deleteCustomer() {
 
     // Cek apakah customer ID sudah digunakan dalam tabel order
     var order_Exists bool
-    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE customer_id=$1)", id).Scan(&orderExists)
+    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE customer_id=$1)", id).Scan(&order_Exists)
     if err != nil {
         log.Fatal(err)
     }
@@ -374,7 +374,7 @@ func deleteService() {
 
     // Check if the service is used in any orders
     var order_Exists bool
-    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM order_detail WHERE service_id=$1)", id).Scan(&orderExists)
+    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM order_detail WHERE service_id=$1)", id).Scan(&order_Exists)
     if err != nil {
         log.Fatal(err)
     }
