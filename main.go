@@ -420,17 +420,17 @@ func orderMenu() {
 }
 
 func createOrder() {
-    var orderID, customerID int
-    var receivedBy string
-    var serviceID, quantity int
+    var order_ID, customer_ID int
+    var received_By string
+    var service_ID, quantity int
 
     // Input order information
     fmt.Print("Enter order ID: ")
-    fmt.Scanln(&orderID)
+    fmt.Scanln(&order_ID)
 
     // Cek apakah order ID sudah ada
     var exists bool
-    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", orderID).Scan(&exists)
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", order_ID).Scan(&exists)
     if err != nil {
         log.Fatal(err)
     }
@@ -441,9 +441,9 @@ func createOrder() {
 
     // Input customer ID
     fmt.Print("Enter customer ID: ")
-    fmt.Scanln(&customerID)
+    fmt.Scanln(&customer_ID)
 
-    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM customer WHERE customer_id=$1)", customerID).Scan(&exists)
+    err = db.QueryRow("SELECT EXISTS (SELECT 1 FROM customer WHERE customer_id=$1)", customer_ID).Scan(&exists)
     if err != nil {
         log.Fatal(err)
     }
@@ -454,9 +454,9 @@ func createOrder() {
 
     // Input service details
     fmt.Print("Enter received by: ")
-    fmt.Scanln(&receivedBy)
+    fmt.Scanln(&received_By)
     fmt.Print("Enter service ID: ")
-    fmt.Scanln(&serviceID)
+    fmt.Scanln(&service_ID)
     fmt.Print("Enter quantity: ")
     fmt.Scanln(&quantity)
 
@@ -467,7 +467,7 @@ func createOrder() {
     }
 
     // Insert ke tabel order
-    _, err = tx.Exec("INSERT INTO \"order\" (order_id, customer_id, order_date, received_by) VALUES ($1, $2, NOW(), $3)", orderID, customerID, receivedBy)
+    _, err = tx.Exec("INSERT INTO \"order\" (order_id, customer_id, order_date, received_by) VALUES ($1, $2, NOW(), $3)", order_ID, customer_ID, received_By)
     if err != nil {
         // Jika gagal, rollback transaksi
         tx.Rollback()
@@ -476,7 +476,7 @@ func createOrder() {
     }
 
     // Insert ke tabel order_detail
-    _, err = tx.Exec("INSERT INTO order_detail (order_id, service_id, qty)VALUES ($1, $2, $3)", orderID, serviceID, quantity)
+    _, err = tx.Exec("INSERT INTO order_detail (order_id, service_id, qty)VALUES ($1, $2, $3)", order_ID, service_ID, quantity)
     if err != nil {
         // Jika gagal, rollback transaksi
         tx.Rollback()
@@ -494,14 +494,14 @@ func createOrder() {
 }
 
 func completeOrder() {
-    var orderID int
+    var order_ID int
     var completionDate string
 
     fmt.Print("Enter order ID: ")
-    fmt.Scanln(&orderID)
+    fmt.Scanln(&order_ID)
 
     var exists bool
-    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", orderID).Scan(&exists)
+    err := db.QueryRow("SELECT EXISTS (SELECT 1 FROM \"order\" WHERE order_id=$1)", order_ID).Scan(&exists)
     if err != nil {
         log.Fatal(err)
     }
@@ -513,7 +513,7 @@ func completeOrder() {
     fmt.Print("Enter completion date (YYYY-MM-DD): ")
     fmt.Scanln(&completionDate)
 
-    _, err = db.Exec("UPDATE \"order\" SET completion_date=$1, updated_at=NOW() WHERE order_id=$2", completionDate, orderID)
+    _, err = db.Exec("UPDATE \"order\" SET completion_date=$1, updated_at=NOW() WHERE order_id=$2", completionDate, order_ID)
     if err != nil {
         log.Fatal(err)
     }
